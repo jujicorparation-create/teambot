@@ -1,0 +1,15 @@
+[
+{
+  "modid": "autodeposit",
+  "name": "AutoDeposit",
+  "description": "3 daqiqada bir marta echest'ga to'liq avto-deposit",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "authorList": ["Huyna"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
