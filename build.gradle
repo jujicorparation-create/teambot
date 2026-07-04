@@ -1,39 +1,48 @@
 buildscript {
     repositories {
-        jcenter()
-        maven { url = "https://files.minecraftforge.net/maven" }
+        mavenCentral()
+        maven { url = 'https://maven.gofancy.wtf/releases' }
+        maven { url = 'https://maven.minecraftforge.net/' }
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '2.3-SNAPSHOT', changing: true
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.+'
+        classpath group: 'wtf.gofancy.fancygradle', name: 'wtf.gofancy.fancygradle.gradle.plugin', version: '+'
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
+
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'wtf.gofancy.fancygradle'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
 
 version = "1.0"
 group = "uz.minestax.autodeposit"
 archivesBaseName = "autodeposit"
 
-sourceCompatibility = targetCompatibility = '1.8'
-compileJava {
-    sourceCompatibility = targetCompatibility = '1.8'
-}
+// Minecraft 1.12.2 o'zi Java 8 talab qiladi
+java.toolchain.languageVersion = JavaLanguageVersion.of(8)
 
 minecraft {
-    version = "1.12.2-14.23.5.2859"
-    runDir = "run"
-    mappings = "snapshot_20171003"
+    mappings channel: 'stable', version: '39-1.12'
+}
+
+fancyGradle {
+    patches {
+        // hozircha qo'shimcha patch shart emas
+    }
 }
 
 dependencies {
+    minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2860'
 }
 
 processResources {
     inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
+    inputs.property "mcversion", "1.12.2"
 
     from(sourceSets.main.resources.srcDirs) {
         include 'mcmod.info'
-        expand 'version': project.version, 'mcversion': project.minecraft.version
+        expand 'version': project.version, 'mcversion': "1.12.2"
     }
 
     from(sourceSets.main.resources.srcDirs) {
