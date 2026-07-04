@@ -10,6 +10,6 @@
   "credits": "",
   "logoFile": "",
   "screenshots": [],
-  "dependencies": []
+  "dependencies": ["forge@[14.23.5.2847,)"]
 }
 ]
