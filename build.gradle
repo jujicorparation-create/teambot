@@ -37,6 +37,8 @@ dependencies {
 }
 
 processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
     inputs.property "version", project.version
     inputs.property "mcversion", "1.12.2"
 
