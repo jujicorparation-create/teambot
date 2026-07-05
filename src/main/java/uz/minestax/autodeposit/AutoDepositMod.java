@@ -17,17 +17,17 @@ import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-@Mod(modid = AutoDepositMod.MODID, name = "AutoDeposit", version = "1.3")
+@Mod(modid = AutoDepositMod.MODID, name = "AutoDeposit", version = "1.4")
 public class AutoDepositMod {
 
     public static final String MODID = "autodeposit";
 
     // === SOZLAMALAR ===
     private static final int INTERVAL_TICKS = 3 * 60 * 20; // 3 daqiqa (Echest ochilish oralig'i)
-    private static final int SYNC_DELAY_TICKS = 15;        // Oyna ochilgach slotlar yuklanishi uchun kutish
-    private static final int GUI_TIMEOUT_TICKS = 100;      // Echest ochilmay qolsa bekor qilish
-    private static final int CLICK_PASS_INTERVAL = 2;      // Har 2 tickda 1 marta bosish (Tez va barqaror)
-    private static final int MAX_DEPOSIT_TICKS = 2400;     // Maksimal 2 daqiqa kutish (Bloklar ko'p bo'lsa ulgurish uchun)
+    private static final int SYNC_DELAY_TICKS = 15;        // GUI yuklanishi uchun kutish
+    private static final int GUI_TIMEOUT_TICKS = 100;      
+    private static final int CLICK_PASS_INTERVAL = 2;      // Har 2 tickda 1 marta bosish
+    private static final int MAX_DEPOSIT_TICKS = 30 * 20;  // ROSA 30 SONIYA (30 * 20 tick)
     private static final String OPEN_COMMAND = "/team echest";
 
     private int tickCounter = 0;
@@ -81,7 +81,7 @@ public class AutoDepositMod {
                 if (depositCounter % CLICK_PASS_INTERVAL == 0) {
                     boolean movedAnything = depositPass(mc);
                     
-                    // Bloklar butunlay tugasa yoki 2 daqiqa vaqt o'tsa oyna yopiladi
+                    // Bloklar tugasa yoki 30 soniya o'tsa GUI yopiladi
                     if ((!movedAnything && mc.player.inventory.getItemStack().isEmpty()) || depositCounter >= MAX_DEPOSIT_TICKS) {
                         mc.player.closeScreen();
                         state = State.IDLE;
@@ -111,21 +111,24 @@ public class AutoDepositMod {
 
         ItemStack cursorStack = player.inventory.getItemStack();
 
-        // 1. Kursorda (sichqonchada) blok bo'lsa, uni joylash
+        // 1. Kursorda (sichqonchada) blok bo'lsa, uni Echestga joylaymiz
         if (!cursorStack.isEmpty()) {
             Item item = cursorStack.getItem();
-            boolean isDiamondOrEmerald = (item == Item.getItemFromBlock(Blocks.DIAMOND_BLOCK) || item == Item.getItemFromBlock(Blocks.EMERALD_BLOCK));
-            boolean isGoldOrIron = (item == Item.getItemFromBlock(Blocks.GOLD_BLOCK) || item == Item.getItemFromBlock(Blocks.IRON_BLOCK));
+            boolean isTargetBlock = (item == Item.getItemFromBlock(Blocks.DIAMOND_BLOCK) || 
+                                     item == Item.getItemFromBlock(Blocks.EMERALD_BLOCK) || 
+                                     item == Item.getItemFromBlock(Blocks.GOLD_BLOCK) || 
+                                     item == Item.getItemFromBlock(Blocks.IRON_BLOCK));
 
-            if (isDiamondOrEmerald || isGoldOrIron) {
-                int maxLimit = isDiamondOrEmerald ? 32 : 64;
+            if (isTargetBlock) {
+                int maxLimit = 32; // HAMMA BLOKLAR UCHUN CHEKLOV 32 TA!
 
-                // Birinchi navbatda: Echestda bor va limiti to'lmagan slotlarni to'ldiramiz
+                // Birinchi navbatda: Echestda xuddi shu blokdan bor va soni 32 tadan kam bo'lgan slotlarni to'ldiramiz
                 for (int i = 0; i < playerInvStart; i++) {
                     Slot targetSlot = container.getSlot(i);
                     ItemStack targetStack = targetSlot.getStack();
 
                     if (!targetStack.isEmpty() && targetStack.getItem() == item && targetStack.getCount() < maxLimit) {
+                        // Sichqonchaning o'ng tugmasi bilan 1 donadan tashlaydi
                         mc.playerController.windowClick(container.windowId, targetSlot.slotNumber, 1, ClickType.PICKUP, player);
                         return true;
                     }
@@ -137,11 +140,11 @@ public class AutoDepositMod {
                     ItemStack targetStack = targetSlot.getStack();
 
                     if (targetStack.isEmpty()) {
-                        if (isDiamondOrEmerald && cursorStack.getCount() > 32) {
-                            // Almaz/Zumrad 32 tadan oshmasligi uchun o'ng tugma bilan donalab qo'yish
+                        if (cursorStack.getCount() > 32) {
+                            // Qo'limizda 32 tadan ko'p bo'lsa, o'ng tugma (1) bilan donalab tashlaymiz (32 ta bo'lguncha)
                             mc.playerController.windowClick(container.windowId, targetSlot.slotNumber, 1, ClickType.PICKUP, player);
                         } else {
-                            // Oltin/Temir yoki stak kichik bo'lsa hammasini qo'yish
+                            // Qo'limizda 32 ta yoki undan kam bo'lsa, chap tugma (0) bilan hammasini qo'yamiz
                             mc.playerController.windowClick(container.windowId, targetSlot.slotNumber, 0, ClickType.PICKUP, player);
                         }
                         return true;
@@ -149,7 +152,7 @@ public class AutoDepositMod {
                 }
             }
             
-            // Echest to'lgan bo'lsa, qo'ldagi blokni o'z inventarimizga qaytaramiz
+            // Echest butunlay to'la bo'lsa, qo'limizdagi blokni inventarimizga qaytaramiz
             for (int i = playerInvStart; i < totalSlots; i++) {
                 Slot targetSlot = container.getSlot(i);
                 if (targetSlot.getStack().isEmpty()) {
@@ -160,7 +163,7 @@ public class AutoDepositMod {
             return false;
         }
 
-        // 2. Qo'limiz bo'sh bo'lsa, inventardan kerakli blokni qidirib qo'lga olamiz
+        // 2. Qo'limiz bo'sh bo'lsa, inventardan 4 ta blokdan birini qidirib qo'lga olamiz
         for (int i = playerInvStart; i < totalSlots; i++) {
             Slot slot = container.getSlot(i);
             if (slot != null && slot.getHasStack()) {
@@ -172,6 +175,7 @@ public class AutoDepositMod {
                     item == Item.getItemFromBlock(Blocks.GOLD_BLOCK) ||
                     item == Item.getItemFromBlock(Blocks.IRON_BLOCK)) {
                     
+                    // Chap tugma bilan stakni butunlay qo'lga olish
                     mc.playerController.windowClick(container.windowId, slot.slotNumber, 0, ClickType.PICKUP, player);
                     return true;
                 }
@@ -181,3 +185,4 @@ public class AutoDepositMod {
         return false;
     }
 }
+
