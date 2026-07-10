@@ -28,12 +28,12 @@ public class AutoDepositMod {
 
     public static final String MODID = "autodeposit";
 
-    // === SOZLAMALAR ===
-    private static final int INTERVAL_TICKS = 1 * 60 * 20; // Har 1 daqiqada
+    // === SOZLAMALAR (Vaqtlarga va limitlarga tegilmadi) ===
+    private static final int INTERVAL_TICKS = 1 * 60 * 20; 
     private static final int SYNC_DELAY_TICKS = 15;        
     private static final int GUI_TIMEOUT_TICKS = 100;      
     private static final int CLICK_PASS_INTERVAL = 2;      
-    private static final int MAX_DEPOSIT_TICKS = 30 * 20;  // 30 soniya max ishlaydi
+    private static final int MAX_DEPOSIT_TICKS = 30 * 20;  
     private static final String OPEN_COMMAND = "/team echest";
 
     // === TUGMALAR ===
@@ -95,7 +95,11 @@ public class AutoDepositMod {
                 if (tickCounter >= INTERVAL_TICKS) {
                     tickCounter = 0;
                     waitCounter = 0;
+                    
+                    // 1. Avval stop yozadi, keyin echest ochadi
+                    mc.player.sendChatMessage("stop");
                     mc.player.sendChatMessage(OPEN_COMMAND);
+                    
                     state = State.WAITING_GUI;
                 }
                 break;
@@ -103,6 +107,8 @@ public class AutoDepositMod {
             case WAITING_GUI:
                 waitCounter++;
                 if (waitCounter >= GUI_TIMEOUT_TICKS) {
+                    // Agar oyna ochilmay qolib ketib timeout bo'lsa ham mayli kodi yuboradi
+                    mc.player.sendChatMessage("#mine emerald_block diamond_block");
                     state = State.IDLE;
                 }
                 break;
@@ -120,8 +126,13 @@ public class AutoDepositMod {
                 if (depositCounter % CLICK_PASS_INTERVAL == 0) {
                     boolean movedAnything = depositPass(mc);
                     
+                    // Agar soladigan narsa qolmagan bo'lsa yoki vaqt tugasa loop yopiladi
                     if ((!movedAnything && mc.player.inventory.getItemStack().isEmpty()) || depositCounter >= MAX_DEPOSIT_TICKS) {
                         mc.player.closeScreen();
+                        
+                        // 2. Echest yopilgach chatga yangi buyruq yuboriladi
+                        mc.player.sendChatMessage("#mine emerald_block diamond_block");
+                        
                         state = State.IDLE;
                     }
                 }
@@ -149,13 +160,11 @@ public class AutoDepositMod {
 
         ItemStack cursorStack = player.inventory.getItemStack();
 
-        // 1. Kursorda narsa bo'lsa
+        // 1. Kursorda narsa bo'lsa (Sichqonchada element osilib turgan holat)
         if (!cursorStack.isEmpty()) {
             Item item = cursorStack.getItem();
             
-            // SRAZI YERGA TASHVORIYORISH: Qo'lga temir bloki tushsa, srazi yerga otib yuboradi!
             if (item == Item.getItemFromBlock(Blocks.IRON_BLOCK) || item.getRegistryName().toString().contains("iron_block")) {
-                // slotNumber = -999 oynadan tashqariga chertish degani, bu narsani srazi yerga uloqtiradi
                 mc.playerController.windowClick(container.windowId, -999, 0, ClickType.PICKUP, player);
                 return true;
             }
@@ -167,7 +176,8 @@ public class AutoDepositMod {
             if (isTargetBlock) {
                 int maxLimit = 32;
 
-                for (int i = 0; i < playerInvStart; i++) {
+                // [O'ZGARTIRILDI] Echest ichidagi bir xil blok bor slotlarni oxiridan boshlab qidirish
+                for (int i = playerInvStart - 1; i >= 0; i--) {
                     Slot targetSlot = container.getSlot(i);
                     ItemStack targetStack = targetSlot.getStack();
 
@@ -177,7 +187,8 @@ public class AutoDepositMod {
                     }
                 }
 
-                for (int i = 0; i < playerInvStart; i++) {
+                // [O'ZGARTIRILDI] Butunlay bo'sh slotlarni echestning oxiridan (masalan, 26, 25, 24...) boshlab qidirish
+                for (int i = playerInvStart - 1; i >= 0; i--) {
                     Slot targetSlot = container.getSlot(i);
                     ItemStack targetStack = targetSlot.getStack();
 
@@ -192,7 +203,7 @@ public class AutoDepositMod {
                 }
             }
             
-            // Boshqa narsa bo'lsa inventarga qaytarish
+            // Agar kursorda boshqa keraksiz narsa bo'lsa o'yinchining o'z inventariga qaytaradi
             for (int i = playerInvStart; i < totalSlots; i++) {
                 Slot targetSlot = container.getSlot(i);
                 if (targetSlot.getStack().isEmpty()) {
@@ -211,7 +222,6 @@ public class AutoDepositMod {
                 Item item = stack.getItem();
                 String registryName = item.getRegistryName().toString();
 
-                // Agar slotda temir bloki bo'lsa, unga umuman tegmasdan o'tib ketamiz
                 if (item == Item.getItemFromBlock(Blocks.IRON_BLOCK) || registryName.contains("iron_block")) {
                     continue; 
                 }
